@@ -215,7 +215,8 @@ local function calculate_position(border)
       popup.popup_props.position.col = popup.popup_props.position.col + padding.left
     end
   end
-
+  log.info('returned position is: ', position)
+  log.info('popup props are:', popup.popup_props)
   return position
 end
 
@@ -325,7 +326,7 @@ function Border:mount()
   if props.buf_lines then
     vim.api.nvim_buf_set_lines(self.bufnr, 0, size.height, false, props.buf_lines)
   end
-
+  --log.info(self.win_config)
   self.winid = vim.api.nvim_open_win(self.bufnr, false, self.win_config)
   assert(self.winid, "failed to create border window")
 
@@ -382,6 +383,34 @@ function Border:resize()
       vim.api.nvim_buf_set_lines(self.bufnr, 0, props.size.height, false, props.buf_lines)
     end
   end
+end
+
+function Border:reposition()
+  local props = self.border_props
+
+  if props.type == "complex" then
+    props.position = calculate_position(self)
+  end
+
+  local win_config = {
+    row = props.position.row,
+    col = props.position.col,
+    relative = self.popup.win_config.relative,
+  }
+
+  if self.win_config.bufpos then
+    win_config.bufpos = self.win_config.bufpos
+  end
+
+  if self.win_config.win then
+    win_config.win = self.win_config.win
+  end
+
+  if self.winid then
+    vim.api.nvim_win_set_config(self.winid, win_config)
+  end
+
+  self.win_config = vim.tbl_extend("force", self.win_config, win_config)
 end
 
 ---@param edge "'top'" | "'bottom'"

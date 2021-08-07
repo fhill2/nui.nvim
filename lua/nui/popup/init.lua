@@ -235,7 +235,8 @@ function Popup:mount()
 
   local enter = self.win_config._enter
   self.win_config._enter = nil
-  self.winid = vim.api.nvim_open_win(self.bufnr, enter, self.win_config)
+
+   self.winid = vim.api.nvim_open_win(self.bufnr, enter, self.win_config)
   assert(self.winid, "failed to create popup window")
 
   for name, value in pairs(self.win_options) do
@@ -321,6 +322,56 @@ function Popup:set_size(size)
     })
   end
 end
+
+function Popup:set_position(position, relative)
+  local props = self.popup_props
+
+  local container_info = get_container_info(self)
+  props.position = calculate_window_position(position, props.size, container_info)
+
+  self.border:reposition()
+
+  local win_config
+  if relative then
+    win_config = vim.tbl_extend("force", {
+      row = props.position.row,
+      col = props.position.col,
+    }, parse_relative(
+      relative
+    ))
+
+    if relative.bufpos then
+      self.win_config.win = nil
+      self.border.win_config.win = nil
+    end
+
+    if relative.win then
+      self.win_config.bufpos = nil
+      self.border.win_config.bufpos = nil
+    end
+  else
+    win_config = {
+      row = props.position.row,
+      col = props.position.col,
+      relative = self.win_config.relative,
+    }
+
+    if self.win_config.bufpos then
+      win_config.bufpos = self.win_config.bufpos
+    end
+
+    if self.win_config.win then
+      win_config.win = self.win_config.win
+    end
+  end
+
+  if self.winid then
+    vim.api.nvim_win_set_config(self.winid, win_config)
+  end
+
+  self.win_config = vim.tbl_extend("force", self.win_config, win_config)
+end
+
 
 local PopupClass = setmetatable({
   __index = Popup,
